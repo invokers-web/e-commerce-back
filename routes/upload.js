@@ -133,5 +133,3 @@ router.post("/multiple", upload.array("images", 10), async (req, res) => {
 });
 
 module.exports = router;
-
-module.exports = router;
