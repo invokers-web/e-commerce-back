@@ -1,54 +1,75 @@
-require('dotenv').config();
-const express = require('express');
-const bodyParser = require('body-parser');
-const { default: mongoose } = require('mongoose');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
-const app = express();
+const cluster = require("cluster");
+const os = require("os");
+const numCPUs = os.cpus().length;
 
-// REQUIRE ROUTES
-const uploadRoutes = require('./routes/upload');
+if (cluster.isMaster) {
+    console.log(`Master process running with PID: ${process.pid}`);
 
-// BODY PARSERS
-app.use(express.json());
-app.use(bodyParser.json())
+    for (let i = 0; i < numCPUs; i++) {
+        cluster.fork();
+    }
 
-// COOKIES
-app.use(cookieParser())
+    cluster.on("exit", (worker, code, signal) => {
+        console.log(`Worker ${worker.process.pid} exited. Forking a new one.`);
+        cluster.fork();
+    });
+} else {
+    // DOTENV CONFIGURATION
+    require("dotenv").config();
 
-// Cors Middleware (Only for development)
-const corsOptions = {
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
-};
-app.use(cors(corsOptions))
+    // EXPRESS CONFIGURATION
+    const express = require("express");
+    const app = express();
 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'))
+    // REQUIRE ROUTES
+    const uploadRoutes = require("./routes/upload");
+    const authRoutes = require("./routes/userAuth");
 
+    // BODY PARSERS
+    const bodyParser = require("body-parser");
+    app.use(express.json());
+    app.use(bodyParser.json());
+    app.use(express.urlencoded({ extended: true }));
 
-// ROUTES
-app.use("/uploads", uploadRoutes)
+    // COOKIES
+    const cookieParser = require("cookie-parser");
+    app.use(cookieParser());
 
-// ERROR CATCHER
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Internal Server Error!');
-});
+    // Cors Middleware (Only for development)
+    const cors = require("cors");
+    const corsOptions = {
+        credentials: true,
+        allowedHeaders: ["Content-Type", "Authorization"],
+    };
+    app.use(cors(corsOptions));
 
+    // ROUTES
+    app.use("/uploads", uploadRoutes);
+    app.use("/auth", authRoutes);
 
-// DATABASE CONNECTION
-mongoose.connect(process.env.MONGO_URI, {
-    readPreference: 'secondaryPreferred',
-    maxPoolSize: 10,
-    minPoolSize: 5,
-}).then(() => {
-    console.log('Connected to Database')
-}).catch((error) => {
-    console.log(error)
-})
+    // ERROR CATCHER
+    app.use((err, req, res, next) => {
+        console.error(err.stack);
+        res.status(500).send("Internal Server Error!");
+    });
 
-// APP PORT LISTENER
-app.listen(process.env.PORT, () => {
-    console.log(`Listening on port ${process.env.PORT}`)
-})
+    // DATABASE CONNECTION
+    const { default: mongoose } = require("mongoose");
+    mongoose
+        .connect(process.env.MONGO_URI, {
+            readPreference: "secondaryPreferred",
+            maxPoolSize: 10,
+            minPoolSize: 5,
+        })
+        .then(() => {
+            console.log("Connected to Database");
+        })
+        .catch((error) => {
+            console.log(error);
+        });
+
+    // APP PORT LISTENER
+    app.listen(process.env.PORT, () => {
+        console.log(`Listening on port ${process.env.PORT}`);
+    });
+}

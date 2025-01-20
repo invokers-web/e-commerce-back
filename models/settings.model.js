@@ -11,5 +11,10 @@ const settingsSchema = new Schema({
         type: String,
         required: [true, "Description is required"]
     },
+    logo: {
+        type: String,
+        required: [true, "Logo URL is required"]
+    },
+    
     
 })

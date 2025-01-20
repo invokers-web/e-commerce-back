@@ -1,21 +1,23 @@
 const Aws = require("aws-sdk");
-const path = require('path');
+const path = require("path");
 
-const express = require('express');
+const express = require("express");
 const sharp = require("sharp");
 const multer = require("multer");
 const router = express.Router();
 
-
-
 // VALIDATE FILE MIMETYPE
 const filefilter = (req, file, cb) => {
-    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg' || file.mimetype === 'image/png') {
-        cb(null, true)
+    if (
+        file.mimetype === "image/jpeg" ||
+        file.mimetype === "image/jpg" ||
+        file.mimetype === "image/png"
+    ) {
+        cb(null, true);
     } else {
-        cb(null, false)
+        cb(null, false);
     }
-}
+};
 
 // IF YOU WANT VALIDATION FOR FILE SIZE
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -47,14 +49,14 @@ const validateImageDimensions = async (buffer) => {
 // STORAGE, MULTER, S3 CONFIGURATIONS
 const storage = multer.memoryStorage({
     destination: (req, file, cb) => {
-        cb(null, '')
-    }
-})
-const upload = multer({ storage: storage, fileFilter: filefilter })
+        cb(null, "");
+    },
+});
+const upload = multer({ storage: storage, fileFilter: filefilter });
 const s3 = new Aws.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET
-})
+    secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET,
+});
 
 router.post("/", upload.single("image"), async (req, res) => {
     try {
@@ -69,31 +71,36 @@ router.post("/", upload.single("image"), async (req, res) => {
             .jpeg({ quality: 80 }) // Compress with 80% quality
             .toBuffer();
 
-
         // IF YOU WANT TO CONVERT IMAGE TO ANOTHER EXTENSION
-        const convertedImage = await sharp(file.buffer).toFormat("webp").toBuffer();
-
+        const convertedImage = await sharp(file.buffer)
+            .toFormat("webp")
+            .toBuffer();
 
         const params = {
             Bucket: process.env.AWS_BUCKET_NAME,
-            Key: `images/file-${Date.now()}${path.extname(req.file.originalname)}`,
+            Key: `images/file-${Date.now()}${path.extname(
+                req.file.originalname
+            )}`,
             Body: req.file.buffer,
             ACL: "public-read-write",
-            ContentType: "image/jpeg"
+            ContentType: "image/jpeg",
         };
         s3.upload(params, async (error, data) => {
             if (error) {
-                res.status(500).json({ error: error.message })
+                res.status(500).json({ error: error.message });
             }
             res.status(200).json({
                 message: "File uploaded successfully",
                 success: true,
                 location: `${data.Location}`,
-            })
-        })
+            });
+        });
     } catch (error) {
         console.error("Upload error:", error);
-        res.status(500).json({ message: "File upload failed", error: error.message });
+        res.status(500).json({
+            message: "File upload failed",
+            error: error.message,
+        });
     }
 });
 
@@ -108,7 +115,9 @@ router.post("/multiple", upload.array("images", 10), async (req, res) => {
         const uploadPromises = files.map((file) => {
             const params = {
                 Bucket: process.env.AWS_BUCKET_NAME,
-                Key: `images/file-${Date.now()}-${file.originalname}`,
+                Key: `images/file-${Date.now()}${path.extname(
+                    file.originalname
+                )}`,
                 Body: file.buffer,
                 ACL: "public-read-write",
                 ContentType: file.mimetype,
@@ -128,7 +137,10 @@ router.post("/multiple", upload.array("images", 10), async (req, res) => {
         });
     } catch (error) {
         console.error("Upload error:", error);
-        res.status(500).json({ message: "File upload failed", error: error.message });
+        res.status(500).json({
+            message: "File upload failed",
+            error: error.message,
+        });
     }
 });
 
