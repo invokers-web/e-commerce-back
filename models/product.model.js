@@ -2,48 +2,56 @@ const { default: mongoose } = require("mongoose");
 
 const Schema = mongoose.Schema;
 const productSchema = new Schema({
-    
     name: {
         type: String,
-        required: true
+        required: true,
     },
     basic_price: {
         type: Number,
-        required: true
+        required: true,
     },
-    main_images: [{
-        type: String,
-        required: true
-    }],
-    availableSize: [ // SM
+    main_images: [
         {
-            sizeId: {
+            type: String,
+            required: true,
+        },
+    ],
+    availableSize: [
+        // SM
+        {
+            size: {
                 type: Schema.Types.ObjectId,
-                ref: 'Size'
+                ref: "Size",
             },
             price: {
                 type: Number,
-                required: true
+                required: true,
             },
-            images: [{
-
-            }]
-        }
+            images: [
+                {
+                    type: String,
+                    required: true,
+                },
+            ],
+        },
     ],
-    availableColors: [ // black
+    availableColors: [
+        // black
         {
             colorId: {
                 type: Schema.Types.ObjectId,
-                ref: 'Color'
+                ref: "Color",
             },
             price: {
                 type: Number,
-                required: true
+                required: true,
             },
-            images: [{
-
-            }]
-        }
+            images: [
+                {
+                    type: String,
+                    required: true,
+                },
+            ],
+        },
     ],
-
-})
+});
