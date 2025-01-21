@@ -32,7 +32,7 @@ const validateFileSize = (req, file, cb) => {
 const createThumbnail = async (buffer) => {
     return await sharp(buffer)
         .resize({ width: 150, height: 150, fit: "cover" }) // Thumbnail size
-        .jpeg({ quality: 70 })
+        .webp({ quality: 70 })
         .toBuffer();
 };
 
@@ -62,7 +62,9 @@ router.post("/", upload.single("image"), async (req, res) => {
     try {
         const file = req.file;
         if (!file) {
-            return res.status(400).json({ message: "No file uploaded" });
+            const error = new Error("No file uploaded");
+            error.statusCode = 400;
+            throw error;
         }
 
         // IF YOU WANT TO RESIZE AND COMPRESS IMAGE
@@ -87,7 +89,9 @@ router.post("/", upload.single("image"), async (req, res) => {
         };
         s3.upload(params, async (error, data) => {
             if (error) {
-                res.status(500).json({ error: error.message });
+                const error = new Error(error.message);
+                error.statusCode = 500;
+                throw error;
             }
             res.status(200).json({
                 message: "File uploaded successfully",
@@ -97,8 +101,9 @@ router.post("/", upload.single("image"), async (req, res) => {
         });
     } catch (error) {
         console.error("Upload error:", error);
-        res.status(500).json({
-            message: "File upload failed",
+        res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || "Internal Server Error!",
             error: error.message,
         });
     }
