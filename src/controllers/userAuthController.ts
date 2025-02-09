@@ -1,15 +1,15 @@
-const { createToken } = require("../helpers/createToken");
-const { sendEmail } = require("../helpers/sendMail");
-const userAuthService = require("../services/userAuth.service");
+import { NextFunction, Request, Response } from "express";
+import { createToken } from "../utils/tokenControl";
+import userAuthService from "../services/userAuth.service";
 
-const registerUser = async (req, res) => {
+import { sendEmail } from "../utils/sendMail";
+import { ValidationError } from "../errors/ValidationError";
+
+export const registerUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
         const { name, email, password, phone, avatar } = req.body;
-        // Validate input fields
         if (!name || !email || !password || !phone) {
-            const error = new Error("All fields are required");
-            error.statusCode = 400;
-            throw error;
+            throw new ValidationError("All fields must be filled");
         }
 
         const user = await userAuthService.createUser({
@@ -20,7 +20,6 @@ const registerUser = async (req, res) => {
             avatar,
         });
 
-        // MAIL SENDER
         const mailSubject = "Thanks for Registering!";
         const mailHtml = `
         <!DOCTYPE html>
@@ -119,53 +118,34 @@ const registerUser = async (req, res) => {
             subject: mailSubject,
             html: mailHtml,
         });
-        const token = createToken(user._id, user.name, user.email, user.phone);
+        const token = createToken(user._id as string, user.name, user.email);
 
         res.status(200).json({
             success: true,
             message: "User registered successfully",
-            user: user,
-            token: token,
+            user,
+            token,
         });
     } catch (error) {
-        console.log(error);
-        res.status(error.statusCode || 500).json({
-            success: false,
-            message: error.message || "Internal Server Error",
-            user: null,
-            token: null,
-        });
+        next(error)
     }
 };
 
-const loginUser = async (req, res) => {
+export const loginUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
         const { email, password } = req.body;
         if (!email || !password) {
-            const error = new Error("Email and password are required");
-            error.statusCode = 400;
-            throw error;
+            throw new ValidationError("Email and Password are required")
         }
-        const user = await userAuthService.loginUser(email, password);
-        const token = createToken(user._id, user.name, user.email, user.phone);
+        const user = await userAuthService.loginUser({ email, password });
+        const token = createToken(user._id as string, user.name, user.email);
         res.status(200).json({
             success: true,
             message: "User logged in successfully",
-            user: user,
-            token: token,
+            user,
+            token,
         });
     } catch (error) {
-        console.log(error);
-        res.status(error.statusCode || 500).json({
-            success: false,
-            message: error.message || "Internal Server Error",
-            user: null,
-            token: null,
-        });
+        next(error)
     }
-};
-
-module.exports = {
-    registerUser,
-    loginUser,
 };
