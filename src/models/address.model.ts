@@ -1,8 +1,16 @@
-const { default: mongoose } = require("mongoose");
+import mongoose, { Schema, Document } from "mongoose";
 
-const Schema = mongoose.Schema;
 
-const addressSchema = new Schema({
+export interface IAddress extends Document {
+    user: Schema.Types.ObjectId;
+    apartment: string;
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+
+}
+const addressSchema = new Schema<IAddress>({
     user: {
         type: Schema.Types.ObjectId,
         ref: "User",
@@ -30,4 +38,4 @@ const addressSchema = new Schema({
     },
 });
 
-module.exports = mongoose.model("Address", addressSchema);
+export default mongoose.model<IAddress>("Address", addressSchema);
